@@ -7,13 +7,18 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify(req.body),
     })
     const data = await response.json()
-    if (!response.ok) return res.status(response.status).json(data)
+    if (!response.ok) {
+      console.error('Anthropic error:', JSON.stringify(data))
+      return res.status(response.status).json(data)
+    }
     return res.status(200).json(data)
   } catch (error) {
-    return res.status(500).json({ error: 'Server error: ' + error.message })
+    console.error('Proxy error:', error)
+    return res.status(500).json({ error: error.message })
   }
 }
