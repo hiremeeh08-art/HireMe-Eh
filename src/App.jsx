@@ -282,17 +282,19 @@ function Jobs({ userPlan }) {
     let all=[];
     try{
       setMsg("Mammo is sniffing out Job Bank Canada listings...");
-      const r1=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:`Search jobbank.gc.ca for current "${q}" jobs in ${loc} Ontario Canada. Find REAL listings posted recently. Return ONLY a raw JSON array (no markdown, no backticks) of up to 5 jobs. Each object: {title,company,location,type,posted,salary,description,applyUrl,skills}`}]})});
+      const r1=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:`Search the web for "${q}" jobs near ${loc} Ontario Canada on jobbank.gc.ca. Look for real current job postings. Return ONLY a valid JSON array (no markdown, no code blocks, just the raw array starting with [) of up to 5 jobs. Each object must have: title (string), company (string), location (string), type (string), posted (string), salary (string), description (string, 1-2 sentences), applyUrl (string, real URL), skills (array of 3 strings). If you cannot find jobs, return an empty array [].`}]})});
       const d1=await r1.json();
-      const t1=(d1.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/```json|```/g,"").trim();
-      if(t1.startsWith("["))all=[...all,...JSON.parse(t1).map(j=>({...j,source:"Job Bank Canada"}))];
-    }catch(e){console.log(e);}
+      const raw1=(d1.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const m1=raw1.match(/\[[\s\S]*\]/);
+      if(m1){try{all=[...all,...JSON.parse(m1[0]).map(j=>({...j,source:"Job Bank Canada"}))]}catch(pe){console.log("parse1",pe)}}
+    }catch(e){console.log("jb err",e);}
     try{
       setMsg("Teelo is grabbing Indeed & LinkedIn results...");
-      const r2=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:`Search Indeed.ca and LinkedIn for current "${q}" ${type!=="Any"?type:""} jobs in ${loc} Ontario Canada posted in the last 2 weeks. Return ONLY a raw JSON array (no markdown) of up to 5 real jobs with real company names and apply links. Each object: {title,company,location,type,posted,salary,description,applyUrl,skills}`}]})});
+      const r2=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:MODEL,max_tokens:1000,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:"user",content:`Search the web for "${q}" ${type!=="Any"?type:""} jobs near ${loc} Ontario Canada. Check Indeed.ca, LinkedIn, and Workopolis. Find real job postings from the last month. Return ONLY a valid JSON array (no markdown, no code blocks, just the raw array starting with [) of up to 5 real jobs. Each object: title (string), company (string), location (string), type (string), posted (string), salary (string), description (string), applyUrl (real URL string), skills (array of 3 strings). If no jobs found, return [].`}]})});
       const d2=await r2.json();
-      const t2=(d2.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").replace(/```json|```/g,"").trim();
-      if(t2.startsWith("["))all=[...all,...JSON.parse(t2).map(j=>({...j,source:"Indeed / LinkedIn"}))];
+      const raw2=(d2.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const m2=raw2.match(/\[[\s\S]*\]/);
+      if(m2){try{all=[...all,...JSON.parse(m2[0]).map(j=>({...j,source:"Indeed / LinkedIn"}))]}catch(pe){console.log("parse2",pe)}}
     }catch(e){console.log(e);}
     setLoading(false);
     if(all.length===0)setErr("No results found. Try different keywords!");
@@ -317,7 +319,7 @@ function Jobs({ userPlan }) {
         <div style={G.two}>
           <div><label style={G.label}>City</label>
             <select style={{...G.input,marginBottom:0}} value={loc} onChange={e=>setLoc(e.target.value)}>
-              {["Toronto, Ontario","Mississauga, Ontario","Brampton, Ontario","Markham, Ontario","Vaughan, Ontario","Oakville, Ontario","Scarborough, Ontario","North York, Ontario","Etobicoke, Ontario","Ajax, Ontario","Anywhere in GTA"].map(l=>(
+              {["Toronto, Ontario","Mississauga, Ontario","Brampton, Ontario","Markham, Ontario","Vaughan, Ontario","Oakville, Ontario","Scarborough, Ontario","North York, Ontario","Etobicoke, Ontario","Ajax, Ontario","Pickering, Ontario","Newmarket, Ontario","Aurora, Ontario","Keswick, Ontario","Holland Landing, Ontario","Sutton, Ontario","Georgina, Ontario","East Gwillimbury, Ontario","Stouffville, Ontario","Uxbridge, Ontario","Whitchurch-Stouffville, Ontario","King City, Ontario","Nobleton, Ontario","Schomberg, Ontario","Bradford, Ontario","Barrie, Ontario","Orillia, Ontario","Oshawa, Ontario","Whitby, Ontario","Anywhere in York Region","Anywhere in Ontario"].map(l=>(
                 <option key={l} value={l} style={{background:C.dark}}>{l}</option>
               ))}
             </select>
